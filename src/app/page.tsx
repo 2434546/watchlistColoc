@@ -36,7 +36,7 @@ export default function Home() {
   const [newType, setNewType] = useState("Film");
   const [filter, setFilter] = useState("All");
 
-  const toggleWatched = (id) => {
+  const toggleWatched = (id: number) => {
     setMovies((prev) =>
         prev.map((movie) =>
             movie.id === id ? { ...movie, watched: !movie.watched } : movie
