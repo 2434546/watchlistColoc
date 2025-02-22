@@ -1,205 +1,85 @@
 "use client";
 
-import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { onAuthStateChanged } from "firebase/auth";
+import { auth } from "../../firebase";
+import { motion } from "framer-motion";
 
 export default function Home() {
-  const [movies, setMovies] = useState([
-    {
-      id: 1,
-      title: "1",
-      watched: false,
-      link: "https://www.netflix.com",
-      image: "/shrek.jpg",
-      type: "Film",
-    },
-    {
-      id: 2,
-      title: "2",
-      watched: true,
-      link: "https://www.primevideo.com",
-      image: "/shrek.jpg",
-      type: "Film",
-    },
-    {
-      id: 3,
-      title: "3",
-      watched: false,
-      link: "https://www.hulu.com",
-      image: "/shrek.jpg",
-      type: "Series",
-    },
-  ]);
+    const [user, setUser] = useState<null | { displayName: string | null }>(null);
+    const router = useRouter();
 
-  const [newMovie, setNewMovie] = useState("");
-  const [newLink, setNewLink] = useState("");
-  const [newImage, setNewImage] = useState("");
-  const [newType, setNewType] = useState("Film");
-  const [filter, setFilter] = useState("All");
+    useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+            if (currentUser) {
+                setUser({ displayName: currentUser.displayName || "User" });
+            } else {
+                setUser(null);
+            }
+        });
+        return () => unsubscribe();
+    }, []);
 
-  const toggleWatched = (id: number) => {
-    setMovies((prev) =>
-        prev.map((movie) =>
-            movie.id === id ? { ...movie, watched: !movie.watched } : movie
-        )
-    );
-  };
+    const handleExploreClick = () => {
+        if (user) {
+            router.push("/catalog");
+        } else {
+            router.push("/login");
+        }
+    };
 
-  const addMovie = () => {
-    if (
-        newMovie.trim() !== "" &&
-        newLink.trim() !== "" &&
-        newImage.trim() !== ""
-    ) {
-      setMovies((prev) => [
-        ...prev,
-        {
-          id: Date.now(),
-          title: newMovie,
-          watched: false,
-          link: newLink,
-          image: newImage,
-          type: newType,
-        },
-      ]);
-      setNewMovie("");
-      setNewLink("");
-      setNewImage("");
-      setNewType("Film");
-    }
-  };
+    return (
+        <div className="relative flex items-center justify-center min-h-screen overflow-hidden">
+            {/* --- GRADIENT BACKGROUND --- */}
+            <div className="absolute inset-0 bg-gradient-to-r from-gray-50 to-gray-100 -z-10" />
 
-  const filteredMovies =
-      filter === "All"
-          ? movies
-          : movies.filter((movie) => movie.type === filter);
+            {/* --- DECORATIVE SHAPES --- */}
+            <div className="absolute w-[30rem] h-[30rem] bg-purple-100 rounded-full top-[-5rem] left-[-10rem] opacity-60 blur-3xl -z-10" />
+            <div className="absolute w-[25rem] h-[25rem] bg-pink-100 rounded-full bottom-[-5rem] right-[-8rem] opacity-60 blur-2xl -z-10" />
 
-  return (
-      <div className="min-h-screen bg-gradient-to-r from-[#f9f9f9] to-[#eef2ff] text-gray-800 p-6">
-        {/* Header */}
-        <header className="text-center mb-12">
-          <h1 className="text-5xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-purple-500 to-pink-500">
-            🎥 Movie/Series Watchlist Coloc 🎬
-          </h1>
-          <div className="mt-6 flex justify-center gap-4">
-            <button
-                onClick={() => setFilter("All")}
-                className={`px-4 py-2 rounded-md font-semibold ${
-                    filter === "All"
-                        ? "bg-purple-500 text-white"
-                        : "bg-gray-300 text-gray-700"
-                }`}
+            {/* --- MAIN CONTENT --- */}
+            <motion.div
+                className="z-10 max-w-xl text-center px-6"
+                initial={{ opacity: 0, y: 25 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.9, ease: "easeOut" }}
             >
-              All
-            </button>
-            <button
-                onClick={() => setFilter("Film")}
-                className={`px-4 py-2 rounded-md font-semibold ${
-                    filter === "Film"
-                        ? "bg-purple-500 text-white"
-                        : "bg-gray-300 text-gray-700"
-                }`}
-            >
-              Films
-            </button>
-            <button
-                onClick={() => setFilter("Series")}
-                className={`px-4 py-2 rounded-md font-semibold ${
-                    filter === "Series"
-                        ? "bg-purple-500 text-white"
-                        : "bg-gray-300 text-gray-700"
-                }`}
-            >
-              Series
-            </button>
-          </div>
-        </header>
-
-        {/* Main Content */}
-        <main className="max-w-5xl mx-auto space-y-8">
-          {/* Movie/Series List */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredMovies.map((movie) => (
-                <div
-                    key={movie.id}
-                    className={`flex flex-col bg-white shadow-lg rounded-lg overflow-hidden transition-transform transform hover:scale-105 ${
-                        movie.watched ? "ring-2 ring-green-500" : "ring-2 ring-red-500"
-                    }`}
+                <motion.h1
+                    className="text-4xl md:text-5xl font-extrabold text-gray-800 mb-6 leading-tight drop-shadow-sm"
+                    initial={{ scale: 0.85, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ duration: 0.7, ease: "easeOut" }}
                 >
-                  <img
-                      src={movie.image}
-                      alt={movie.title}
-                      className="w-full h-56 object-cover"
-                  />
-                  <div className="p-4 flex flex-col justify-between flex-1">
-                    <h2 className="text-lg font-semibold text-gray-700">
-                      {movie.title}
-                    </h2>
-                    <p className="text-sm text-gray-500 mt-1">Type: {movie.type}</p>
-                    <a
-                        href={movie.link}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-500 hover:text-blue-400 text-sm mt-2"
-                    >
-                      Watch on Streaming →
-                    </a>
-                    <button
-                        onClick={() => toggleWatched(movie.id)}
-                        className={`mt-4 px-4 py-2 text-sm rounded-md font-semibold ${
-                            movie.watched
-                                ? "bg-green-500 text-white hover:bg-green-400"
-                                : "bg-red-500 text-white hover:bg-red-400"
-                        }`}
-                    >
-                      {movie.watched ? "Watched" : "Not Watched"}
-                    </button>
-                  </div>
-                </div>
-            ))}
-          </div>
+                    Watchlist de{" "}
+                    <span className="bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent">
+            séries
+          </span>{" "}
+                    &{" "}
+                    <span className="bg-gradient-to-r from-blue-500 to-green-500 bg-clip-text text-transparent">
+            films
+          </span>{" "}
 
-          {/* Add Movie Form */}
-          <div className="bg-white shadow-lg rounded-lg p-6">
-            <h3 className="text-xl font-bold text-gray-700">Add a Movie/Series</h3>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4">
-              <input
-                  type="text"
-                  value={newMovie}
-                  onChange={(e) => setNewMovie(e.target.value)}
-                  placeholder="Title"
-                  className="px-4 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-500"
-              />
-              <input
-                  type="text"
-                  value={newLink}
-                  onChange={(e) => setNewLink(e.target.value)}
-                  placeholder="Streaming Link"
-                  className="px-4 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <input
-                  type="text"
-                  value={newImage}
-                  onChange={(e) => setNewImage(e.target.value)}
-                  placeholder="Image URL"
-                  className="px-4 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-pink-500"
-              />
-              <select
-                  value={newType}
-                  onChange={(e) => setNewType(e.target.value)}
-                  className="px-4 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-teal-500"
-              >
-                <option value="Film">Film</option>
-                <option value="Series">Series</option>
-              </select>
-            </div>
-            <button
-                onClick={addMovie}
-                className="mt-4 px-6 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-md font-semibold hover:opacity-90"
-            >
-              Add
-            </button>
-          </div>
-        </main>
-      </div>
-  );
+                </motion.h1>
+
+                <motion.p
+                    className="text-gray-600 text-base md:text-lg mb-8"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.2, duration: 0.7 }}
+                >
+
+                </motion.p>
+
+                <motion.button
+                    onClick={handleExploreClick}
+                    className="px-8 py-3 rounded-full font-semibold text-white bg-gradient-to-r from-indigo-500 to-purple-600 hover:to-purple-500 transition-colors drop-shadow-md"
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                >
+                    Explorer
+                </motion.button>
+            </motion.div>
+        </div>
+    );
 }
