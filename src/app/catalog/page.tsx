@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from 'next/image';
 
 /** Structure de données pour un film/série */
 type MediaItem = {
@@ -15,12 +16,15 @@ type MediaItem = {
     trailerKey?: string; // Clé YouTube de la bande-annonce
 };
 
+interface Video {
+    site: string;
+    type: string;
+    key: string;
+}
+
 export default function Catalog() {
     const [items, setItems] = useState<MediaItem[]>([]);
     const [filter, setFilter] = useState<"All" | "Film" | "Série">("All");
-
-    // Au lieu d’un état par item, on gère un seul champ : l’ID du film/série dont on affiche la bande-annonce
-    // S’il vaut null, aucune bande-annonce n’est ouverte.
     const [openTrailerId, setOpenTrailerId] = useState<number | null>(null);
 
     const API_KEY = "f54cb9e8900a1adc9beccb4d9ed2d5a3";
@@ -84,7 +88,6 @@ export default function Catalog() {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                // Récupération en parallèle pour tous les items
                 const fetchPromises = wantedItems.map(async (item) => {
                     const endpoint = item.type === "Film" ? "movie" : "tv";
                     const res = await fetch(
@@ -109,10 +112,10 @@ export default function Catalog() {
                         );
                         const videoData = await videoRes.json();
                         const youtubeTrailer = videoData.results?.find(
-                            (vid: any) => vid.site === "YouTube" && vid.type === "Trailer"
+                            (vid: Video) => vid.site === "YouTube" && vid.type === "Trailer"
                         );
                         if (youtubeTrailer) {
-                            trailerKey = youtubeTrailer.key; // ex: d96cjJhvlMA
+                            trailerKey = youtubeTrailer.key;
                         }
                     } catch (err) {
                         console.error("Erreur fetch videos :", err);
@@ -139,19 +142,16 @@ export default function Catalog() {
         };
 
         fetchData();
-    }, []);
+    }, [wantedItems]); // Ajoutez `wantedItems` ici
 
-    /** Ouvrir la modal de bande-annonce pour l’item ID */
     const openTrailer = (id: number) => {
         setOpenTrailerId(id);
     };
 
-    /** Fermer la modal de bande-annonce */
     const closeTrailer = () => {
         setOpenTrailerId(null);
     };
 
-    /** Toggle "vu / non vu" */
     const toggleWatched = (id: number) => {
         setItems((prev) =>
             prev.map((media) =>
@@ -160,13 +160,11 @@ export default function Catalog() {
         );
     };
 
-    // Filtrer
     const filteredItems =
         filter === "All"
             ? items
             : items.filter((media) => media.type === filter);
 
-    // Trouver l’item dont la trailer modal est ouverte
     const currentTrailerItem = filteredItems.find((m) => m.id === openTrailerId);
 
     return (
@@ -229,9 +227,11 @@ export default function Catalog() {
 
                         {/* Image / Poster */}
                         <div className="relative w-full aspect-[2/3]">
-                            <img
+                            <Image
                                 src={media.image}
                                 alt={media.title}
+                                width={500}
+                                height={750}
                                 className="absolute inset-0 w-full h-full object-cover"
                             />
                             {media.watched && (
@@ -305,12 +305,12 @@ export default function Catalog() {
             bg-black bg-opacity-60
             z-50
           "
-                    onClick={closeTrailer} // fermer au clic sur le backdrop
+                    onClick={closeTrailer}
                 >
                     <div
                         className="relative bg-black p-4 rounded shadow-lg"
                         style={{ width: "80%", maxWidth: "800px" }}
-                        onClick={(e) => e.stopPropagation()} // empêcher de fermer en cliquant sur la modale
+                        onClick={(e) => e.stopPropagation()}
                     >
                         <button
                             onClick={closeTrailer}
