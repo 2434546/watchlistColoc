@@ -3,9 +3,10 @@
 import { useState } from "react";
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { useRouter } from "next/navigation";
-import { auth } from "../../../firebase";
+import {auth, db} from "../../../firebase";
 import { motion } from "framer-motion";
 import Link from "next/link";
+import { getFirestore, doc, setDoc } from "firebase/firestore";
 
 export default function Register() {
     const [email, setEmail] = useState("");
@@ -24,7 +25,18 @@ export default function Register() {
         try {
             const userCredential = await createUserWithEmailAndPassword(auth, email, password);
             const user = userCredential.user;
+
+            // Met à jour le profil Firebase Auth (affichage du nom)
             await updateProfile(user, { displayName: `${firstName} ${lastName}` });
+
+            // Stocke les infos supplémentaires dans Firestore
+            await setDoc(doc(db, "users", user.uid), {
+                firstName: firstName,
+                lastName: lastName,
+                email: email,
+                createdAt: new Date()
+            });
+
             // Redirection vers /catalog après inscription réussie
             router.push("/catalog");
         } catch (err) {

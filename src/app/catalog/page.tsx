@@ -2,12 +2,15 @@
 
 import { useState, useEffect } from "react";
 import Image from 'next/image';
+import { auth, db } from "../../../firebase";
+import { collection, doc, getDoc, getDocs, setDoc, updateDoc } from "firebase/firestore";
 
 /** Structure de données pour un film/série */
 type MediaItem = {
     id: number;
     title: string;
     watched: boolean;
+    rating: number;
     link: string;
     image: string;
     type: "Film" | "Série";
@@ -87,7 +90,21 @@ export default function Catalog() {
 
     useEffect(() => {
         const fetchData = async () => {
+            if (!auth.currentUser) return;
+
+            const userUID = auth.currentUser.uid;
+            const watchlistRef = collection(db, "user_watchlist", userUID, "watchlist");
             try {
+                const watchlistSnapshot = await getDocs(watchlistRef);
+                const watchedMap = new Map();
+                const ratingMap = new Map();
+
+                watchlistSnapshot.forEach((doc) => {
+                    const data = doc.data();
+                    watchedMap.set(parseInt(doc.id.replace("Movie_", "")), data.watched);
+                    ratingMap.set(parseInt(doc.id.replace("Movie_", "")), data.rating || 0);
+                });
+
                 const fetchPromises = wantedItems.map(async (item) => {
                     const endpoint = item.type === "Film" ? "movie" : "tv";
                     const res = await fetch(
@@ -123,8 +140,9 @@ export default function Catalog() {
 
                     return {
                         id: item.id,
-                        title,
-                        watched: false,
+                        title: item.type === "Film" ? data.title : data.name,
+                        watched: watchedMap.get(item.id) || false,
+                        rating: ratingMap.get(item.id) || 0,
                         link: `https://www.themoviedb.org/${endpoint}/${item.id}`,
                         image: `https://image.tmdb.org/t/p/w500${data.poster_path}`,
                         type: item.type,
@@ -152,12 +170,55 @@ export default function Catalog() {
         setOpenTrailerId(null);
     };
 
-    const toggleWatched = (id: number) => {
-        setItems((prev) =>
-            prev.map((media) =>
-                media.id === id ? { ...media, watched: !media.watched } : media
-            )
-        );
+    const toggleWatched = async (id: number) => {
+        if (!auth.currentUser) return;
+        const userUID = auth.currentUser.uid;
+        const watchlistRef = doc(db, "user_watchlist", userUID, "watchlist", `Movie_${id}`);
+
+        const mediaItem = items.find((media) => media.id === id);
+        if (!mediaItem) return;
+
+        const newWatchedState = !mediaItem.watched;
+
+        try {
+            const docSnap = await getDoc(watchlistRef);
+            if (!docSnap.exists()) {
+                await setDoc(watchlistRef, {
+                    title: mediaItem.title,
+                    type: mediaItem.type,
+                    watched: newWatchedState,
+                    rating: mediaItem.rating,
+                    createdAt: new Date(),
+                });
+            } else {
+                await updateDoc(watchlistRef, { watched: newWatchedState });
+            }
+
+            setItems((prev) =>
+                prev.map((media) =>
+                    media.id === id ? { ...media, watched: newWatchedState } : media
+                )
+            );
+        } catch (error) {
+            console.error("Erreur lors de la mise à jour Firestore :", error);
+        }
+    };
+
+    const setRating = async (id: number, rating: number) => {
+        if (!auth.currentUser) return;
+        const userUID = auth.currentUser.uid;
+        const watchlistRef = doc(db, "user_watchlist", userUID, "watchlist", `Movie_${id}`);
+
+        try {
+            await updateDoc(watchlistRef, { rating: rating });
+            setItems((prev) =>
+                prev.map((media) =>
+                    media.id === id ? { ...media, rating: rating } : media
+                )
+            );
+        } catch (error) {
+            console.error("Erreur lors de la mise à jour de Firestore :", error);
+        }
     };
 
     const filteredItems =
@@ -276,6 +337,14 @@ export default function Catalog() {
                                     Bande-annonce
                                 </button>
                             )}
+
+                            <div className="flex space-x-1 mb-2">
+                                {[1, 2, 3, 4, 5].map((star) => (
+                                    <button key={star} onClick={() => setRating(media.id, star)}>
+                                        <span className={star <= media.rating ? "text-yellow-400 text-2xl" : "text-gray-300 text-2xl"}>★</span>
+                                    </button>
+                                ))}
+                            </div>
 
                             {/* Bouton "Watch/Unwatch" */}
                             <button
