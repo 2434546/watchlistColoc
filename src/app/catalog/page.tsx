@@ -112,7 +112,7 @@ export default function Catalog() {
                     );
                     const data = await res.json();
 
-                    const title = item.type === "Film" ? data.title : data.name;
+                    //const title = item.type === "Film" ? data.title : data.name;
 
                     let seasons: number | undefined;
                     let episodes: number | undefined;

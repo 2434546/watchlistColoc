@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import {auth, db} from "../../../firebase";
 import { motion } from "framer-motion";
 import Link from "next/link";
-import { getFirestore, doc, setDoc } from "firebase/firestore";
+import { doc, setDoc } from "firebase/firestore";
 
 export default function Register() {
     const [email, setEmail] = useState("");
